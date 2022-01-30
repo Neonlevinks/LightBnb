@@ -22,3 +22,11 @@ CREATE TABLE properties (
   post_code VARCHAR(255) NOT NULL,
   active BOOLEAN
 );
+
+CREATE TABLE reservations (
+  id SERIAL PRIMARY KEY,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  property_id INTEGER REFERENCES properties.id,
+  guest_id INTEGER REFERENCES guests.id
+)
