@@ -14,11 +14,11 @@ const pool = new Pool({
  * @param {String} email The email of the user.
  * @return {Promise<{}>} A promise to the user.
  */
-const getUserWithEmail = function(email) {
+const getUserWithEmail = (email) => {
   return pool
     .query(`SELECT * FROM users WHERE email LIKE $1`, [email])
     .then((result) => {
-      return result.rows;
+      return result.rows[0];
     })
     .catch((err) => {
       return null;
@@ -31,8 +31,15 @@ exports.getUserWithEmail = getUserWithEmail;
  * @param {string} id The id of the user.
  * @return {Promise<{}>} A promise to the user.
  */
-const getUserWithId = function(id) {
-  return Promise.resolve(users[id]);
+const getUserWithId = (id) => {
+  return pool
+    .query(`SELECT * FROM users WHERE id = $1`, [id])
+    .then((result) => {
+      return result.rows[0];
+    })
+    .catch((err) => {
+      return null;
+    });
 }
 exports.getUserWithId = getUserWithId;
 
@@ -43,10 +50,15 @@ exports.getUserWithId = getUserWithId;
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser =  function(user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  return pool
+    .query(`INSERT INTO users (name, email, password)
+     VALUES($1, $2, $3) RETURNING *`, [user.name, user.email, user.password])
+    .then((result) => {
+      return result.rows;
+     })
+    .catch((err) => {
+      return null;
+    });
 }
 exports.addUser = addUser;
 
