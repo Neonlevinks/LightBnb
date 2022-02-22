@@ -142,6 +142,14 @@ exports.getAllReservations = getAllReservations;
     queryString += `WHERE cost_per_night < $${queryParams.length}`;
   }
 
+  if (!options.city && !options.maximum_price_per_night && !options.minimum_price_per_night && options.minimum_rating) {
+    queryParams.push(`${options.minimum_rating}`);
+    queryString += `WHERE avg(reservations.rating) > $${queryParams.length}`
+  } else {
+    queryParams.push(`${options.minimum_rating}`);
+    queryString += `AND WHERE avg(reservations.rating) > $${queryParams.length}`
+  }
+
   queryParams.push(limit);
   queryString +=`
   GROUP BY properties.id
