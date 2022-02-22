@@ -97,13 +97,61 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
  const getAllProperties = (options, limit = 10) => {
-  return pool
-    .query(`SELECT * FROM properties LIMIT $1`, [limit])
-    .then((result) => {
-      return result.rows;
-    })
-    .catch((err) => {
-    });
+
+  const queryParams = [];
+  let queryString = `
+  SELECT properties.*, AVG(property_reviews.rating) AS average_rating
+  FROM properties
+  JOIN property_reviews ON properties.id = property_id
+  `
+  if (Number(options.city)) {
+    queryParams.push(`${options.city}`);
+    queryString += `WHERE properties.owner_id = $${queryParams.length}`;
+  } else if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    queryString += `WHERE city LIKE $${queryParams.length}`;
+  }
+
+  if (options.city && options.minimum_price_per_night && options.maximum_price_per_night) {
+    let dollarPriceMin = options.minimum_price_per_night * 100;
+    let dollarPriceMax = options.maximum_price_per_night * 100;
+    queryParams.push(`${dollarPriceMin}`);
+    queryString += `AND WHERE cost_per_night > $${queryParams.length}`;
+    queryParams.push(`${dollarPriceMax}`);
+    queryString += `AND WHERE cost_per_night < $${queryParams.length}`;
+  }
+
+  if (!options.city && options.minimum_price_per_night && options.maximum_price_per_night) {
+    let dollarPriceMin = options.minimum_price_per_night * 100;
+    let dollarPriceMax = options.maximum_price_per_night * 100;
+    queryParams.push(`${dollarPriceMin}`);
+    queryString += `WHERE cost_per_night > $${queryParams.length}`;
+    queryParams.push(`${dollarPriceMax}`);
+    queryString += `AND WHERE cost_per_night < $${queryParams.length}`;
+  }
+
+  if (!options.city && !options.maximum_price_per_night && options.minimum_price_per_night) {
+    let dollarPriceMin = options.minimum_price_per_night *100;
+    queryParams.push(`${dollarPriceMin}`);
+    queryString += `WHERE cost_per_night > $${queryParams.length}`;
+  }
+
+  if (!options.city && !options.minimum_price_per_night && options.maximum_price_per_night) {
+    let dollarPriceMax = options.maximum_price_per_night * 100;
+    queryParams.push(`${dollarPriceMax}`);
+    queryString += `WHERE cost_per_night < $${queryParams.length}`;
+  }
+
+  queryParams.push(limit);
+  queryString +=`
+  GROUP BY properties.id
+  ORDER BY cost_per_night
+  LIMIT $${queryParams.length};
+  `
+
+  console.log(options, queryString, queryParams);
+
+  return pool.query(queryString, queryParams).then((res) => res.rows);  
 };
 exports.getAllProperties = getAllProperties;
 
